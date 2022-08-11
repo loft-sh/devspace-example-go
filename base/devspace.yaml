@@ -1,104 +1,36 @@
-version: v2beta1 # required
+version: DEVSPACE-VERSION # required
 name: PROJECT-NAME # required
-
-imports:
-- git: PROJECT-TO-IMPORT-FROM
-  tag: TAG-FROM-IMPORTED-PROJECT
-
-functions:
-  hello_world: |-
-    echo "Hello World"
-  get_tag: |-
-    echo $(git rev-parse --short HEAD)
 
 pipelines:
   dev:
     run: |-
-      run_dependencies --all
       create_deployments --all
-      start_dev app
+      start_dev APP-NAME
 
   deploy:
     run: |-
-      run_dependencies --all
       build_images --all -t $(git describe --always)
       create_deployments --all
 
-images:
-  app:
-    image: ghcr.io/loft-sh/devspace/app
-    dockerfile: ./Dockerfile
+  images:
+    APP-NAME:
+      image: IMAGE-URL
+      dockerfile: PATH-TO-DOCKERFILE
 
-deployments:
-  app:
-    helm:
-      chart:
-        name: component-chart
-        repo: https://charts.devspace.sh
-      values:
-        containers:
-          - image: gentele/app
-        service:
-          ports:
-            - port: 8080
-    kubectl:
-
-vars:
-  MY_VAR: 
-  ANOTHER_VAR:
-
-pullSecrets:
-  my-pullsecret:
-    registry: 
-    username: ${REGISTRY_USER}
-    password: ${REGISTRY_PASSWORD}
-
-require: 
-  devspace:
-
-  plugins:
-    - name: # required
-      version: # required
-  commands:
-    - name: # required
-      version: # required
-    - name: my-custom-name
-      versionArgs: ["--version"]
-      # Override the default reg ex
-      versionRegEx: "Version: (v?\\d+\\.\\d+\\.\\d+)"
-      version: 
-
-
-dev:
-  app:
-    imageSelector: ghcr.io/loft-sh/devspace/app
-    devImage: ghcr.io/loft-sh/devspace-containers/go:1.18-alpine
-    ports:
-      - port: "2345"
-      - port: "8080"
-    open:
-      - url: http://localhost:8080
-    terminal:
-      command: ./devspace_start.sh
-    sync:
-      - path: ./
-    ssh:
-      enabled: true
-    proxyCommands:
-      - command: devspace
-      - command: kubectl
-      - command: helm
-      - command: git
-
-commands:
-  migrate-db:
-    command: |-
-      echo 'This is a cross-platform, shared command that can be used to codify any kind of dev task.'
-      echo 'Anyone using this project can invoke it via "devspace run migrate-db"'
-
-dependencies:
-  api:
-    git: https://...  # Git-based dependencies
-    tag: v1.0.0
-  ui:
-    path: ./ui        # Path-based dependencies (for monorepos)
+  deployments:
+    APP-NAME:
+      helm:
+        chart:
+          name: CHART-NAME
+          repo: CHART-URL
+        values:
+          containers:
+            - image: IMAGE-REPO/APP-NAME
+          service:
+            ports:
+              - port: PORT
+      kubectl:
+        manifests:
+          - PATH-TO-MANIFEST
+          - PATH-TO-MANIFEST
+          - ...

@@ -1,0 +1,234 @@
+# DevSpace version
+version: DEVSPACE-VERSION # required
+
+# Project name
+name: PROJECT-NAME # required
+
+# Merges specified config files to current file
+imports:
+
+# The remote repository to download the artifact from
+- git: PROJECT-TO-IMPORT-FROM
+  tag: TAG-FROM-IMPORTED-PROJECT
+  # A path within the artifact's git repository
+  subPath:
+  # Git branch to pull from
+  branch:
+  # Git revision to pull
+  revision:
+  # Additional arguments that can be supplied to the git CLI
+  cloneArgs:
+  # Turn off shallow clones (default: false)
+  disableShallow:
+  # Disable pulling every time DevSpace is reevaluating this source (default: false)
+  disablePull:
+  # Enable the import (default: true)
+  enabled:
+
+# The local path where DevSpace can find the artifact
+- path: ...
+  enabled: false
+
+# POSIX functions that can be used within pipelines and globally
+functions:
+
+  # Example function
+  hello_world: |-
+    echo "Hello World"
+  CUSTOM_FUNCTION: |-
+    ...
+
+  # Pipeline functions
+  
+  # Builds all images passed as arguments in parallel
+  # --tag / -t: If enabled will override the default tags
+  # --skip: If enabled will skip building
+  # --skip-push: If enabled will skip pushing
+  # --skip-push-on-local-kubernetes: If enabled will skip pushing to kubernetes
+  # --force-rebuild: If enabled will force images to rebuild
+  # --sequential: If enabled will build images sequentially as listed
+  # --max-concurrent: ### 
+  # --all: Build all images
+  # --set: Set configuration
+  # --set-string: Set configuration as string input
+  # --from: Reuse an existing configuration
+  # --from-file: Reuse an existing configuration from a file
+  build_images: |-
+    build_images IMAGE-1 IMAGE-2 ... --tag/-t --skip --skip-push --skip-push-on-local-kubernetes --force-rebuild --sequential --max-concurrent --all --set --set-string --from --from-file
+  
+  # Creates pull secrets for all images passed as arguments
+  # --set: Set configuration
+  # --set-string: Set configuration as string input
+  # --from: Reuse an existing configuration
+  # --from-file: Reuse an existing configuration from a file
+  # --all: Ensure all pull secrets
+  ensure_pull_secrets: |-
+    ensure_pull_secrets IMAGE-1 IMAGE-2 ... --set --set-string --from --from-file --all
+  
+  # Returns the most recently built image and/or tag for a given image name
+  # --dependency: Retrieves the image from the named dependency
+  # --only: Displays either only the tag or only the image
+  get_image: |-
+    get_image --dependency --only
+  
+  # Creates all deployments passed as arguments in parallel
+  # --skip: If enabled, will skip deploying
+  # --force-redeploy: Forces redeployment
+  # --sequential: Sequentially deploys the deployments
+  # --render: If true, prints the rendered manifests to the stdout instead of deploying them
+  # --set: Set configuration
+  # --set-string: Set configuration as string input
+  # --from: Reuse an existing configuration
+  # --from-file: Reuse an existing configuration from a file
+  # --all: Deploy all deployments
+  create_deployments: |-
+    create_deployments DEPLOYMENT-1 DEPLOYMENT-2 ... --skip --force-redeploy --sequential --render --set --set-string --from --from-file --all
+  
+  # Purges all deployments passed as arguments
+  # --force-purge: Forces purging of deployments even though they might be still in use by other DevSpace projects
+  # --all: Purge all deployments
+  # --sequential: Sequentially purges the deployments
+  purge_deployments: |-
+    purge_deployments DEPLOYMENT-1 DEPLOYMENT-2 --force-purge --all --sequential
+
+  # Starts all dev modes passed as arguments
+  # --continue-on-terminal-exit: Continue on terminal exit
+  # --disable-sync: If enabled will not start any sync configuration
+  # --disable-port-forwarding: If enabled will not start any port forwarding configuration
+  # --disable-pod-replace: If enabled will not replace any pods
+  # --disable-open: If enabled will not replace any pods
+  # --set: Set configuration
+  # --set-string: Set configuration as string input
+  # --from: Reuse an existing configuration
+  # --from-file: Reuse an existing configuration from a file
+  # --all: Start all dev configurations
+  start_dev: |-
+    start_dev DEV-1 DEV-2 ... --continue-on-terminal-exit --disable-sync --disable-port-forwarding --disable-pod-replace --disable-open --set --set-string --from --from-file --all
+  
+  # Stops all dev modes passed as arguments
+  # --force-purge: Forces purging of deployments even though they might be still in use by other DevSpace projects
+  # --all: Stop all dev configurations
+  stop_dev: |-
+    stop_dev --force-purge --all
+
+  run_pipelines: |-
+  run_default_pipeline: |-
+  run_dependency_pipelines:
+
+  # Global functions
+
+  # Returns true if the pipeline currently being executed is run because the project is a dependency of another project
+  is_dependency:
+  # Returns true if the value of the argument is empty string
+  is_empty: VALUE
+  # Returns true if the values of both arguments provided are equal
+  is_equal: VALUE-1 VALUE-2
+  # Returns true if the current operating system equals the value provided as argument
+  is_os: VALUE
+  # Returns true if the value of the argument is "true"
+  is_true: VALUE
+
+  # Returns the content of a file
+  cat: FILE-PATH
+  # Returns the value of the flag that is provided as argument
+  get_flag: FLAG-NAME
+  # Executes the command provided as argument and watches for conditions to restart the command
+  # --fail on error: If true the command will fail on an error while running the sub command
+  # --path / -p: The paths to watch. Can be patterns in the form of ./**/my-file.txt
+  run_watch (--fail-on-error SUBCOMMAND) (--path / -p PATH):
+  # Pauses the script execution for the number of seconds provided as argument
+  sleep: SECONDS
+  # Reads from stdin, splits input by blanks and executes the command provided as argument for each blank-separated input value
+  xargs: 
+
+pipelines:
+  dev:
+    run: |-
+      run_dependencies --all
+      create_deployments --all
+      start_dev APP-NAME
+
+  deploy:
+    run: |-
+      run_dependencies --all
+      build_images --all -t $(git describe --always)
+      create_deployments --all
+  
+  CUSTOM:
+    run: |-
+      ...
+
+images:
+  APP-NAME:
+    image: IMAGE-URL
+    dockerfile: PATH-TO-DOCKERFILE
+
+deployments:
+  APP-NAME:
+    helm:
+      chart:
+        name: CHART-NAME
+        repo: CHART-URL
+      values:
+        containers:
+          - image: CONTAINER-IMAGE
+        service:
+          ports:
+            - port: PORT
+            - port: PORT
+            - ...
+    kubectl:
+      manifests:
+        - PATH-TO-MANIFEST
+        - PATH-TO-MANIFEST
+        - ...
+vars:
+  MY_VAR: 
+  ANOTHER_VAR:
+
+pullSecrets:
+  PULLSECRET-COMMAND:
+    registry: 
+      username: ${REGISTRY_USER}
+      password: ${REGISTRY_PASSWORD}
+
+require:
+  ...
+
+  plugins:
+    - name: # required
+      version: # required
+  commands:
+    - name: # required
+      version: # required
+
+dev:
+  APP-NAME:
+    imageSelector: IMAGE-REPO-URL/APP-IMAGE
+    devImage: IMAGE-REPO-URL/DEV-IMAGE
+    ports:
+      - port: PORT
+      - port: ...
+    open:
+      - url: http://localhost:PORT
+    terminal:
+      command: ...
+    sync:
+      - path: ./
+    ssh:
+      enabled: true
+    proxyCommands:
+      - command: COMMAND
+      - command: ...
+
+commands:
+  COMMAND-NAME:
+    command: |-
+      ...
+
+dependencies:
+  DEPENDENCY-GIT:
+    git: https://...  # Git-based dependencies
+    tag: TAG
+  DEPENDENCY-LOCAL:
+    path: PATH-TO-UI       # Path-based dependencies (for monorepos)
