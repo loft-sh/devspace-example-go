@@ -27,7 +27,7 @@ imports:
 
 # The local path where DevSpace can find the artifact
 - path: ...
-  enabled: false
+  enabled: false # default: true
 
 # POSIX functions that can be used within pipelines and globally
 functions:
@@ -35,8 +35,6 @@ functions:
   # Example function
   hello_world: |-
     echo "Hello World"
-  CUSTOM_FUNCTION: |-
-    ...
 
   # Pipeline functions
   
@@ -63,13 +61,13 @@ functions:
   # --from-file: Reuse an existing configuration from a file
   # --all: Ensure all pull secrets
   ensure_pull_secrets: |-
-    ensure_pull_secrets IMAGE-1 IMAGE-2 ... --set --set-string --from --from-file --all
+    ensure_pull_secrets IMAGE-1 IMAGE-2 ... --set myImage --set-string myField=myValue --from myImage --from-file myCustomFile.yaml --all
   
   # Returns the most recently built image and/or tag for a given image name
   # --dependency: Retrieves the image from the named dependency
   # --only: Displays either only the tag or only the image
   get_image: |-
-    get_image --dependency --only
+    get_image --dependency myDependency --only tag|image
   
   # Creates all deployments passed as arguments in parallel
   # --skip: If enabled, will skip deploying
@@ -82,7 +80,7 @@ functions:
   # --from-file: Reuse an existing configuration from a file
   # --all: Deploy all deployments
   create_deployments: |-
-    create_deployments DEPLOYMENT-1 DEPLOYMENT-2 ... --skip --force-redeploy --sequential --render --set --set-string --from --from-file --all
+    create_deployments DEPLOYMENT-1 DEPLOYMENT-2 ... --skip --force-redeploy --sequential --render --set myDeployment --set-string myField=myValue --from myDeployment --from-file myCustomFile.yaml --all
   
   # Purges all deployments passed as arguments
   # --force-purge: Forces purging of deployments even though they might be still in use by other DevSpace projects
@@ -103,7 +101,7 @@ functions:
   # --from-file: Reuse an existing configuration from a file
   # --all: Start all dev configurations
   start_dev: |-
-    start_dev DEV-1 DEV-2 ... --continue-on-terminal-exit --disable-sync --disable-port-forwarding --disable-pod-replace --disable-open --set --set-string --from --from-file --all
+    start_dev DEV-1 DEV-2 ... --continue-on-terminal-exit --disable-sync --disable-port-forwarding --disable-pod-replace --disable-open --set myDev --set-string myField=myValue --from myDev --from-file myCustomFile.yaml --all
   
   # Stops all dev modes passed as arguments
   # --force-purge: Forces purging of deployments even though they might be still in use by other DevSpace projects
@@ -111,57 +109,345 @@ functions:
   stop_dev: |-
     stop_dev --force-purge --all
 
+  # Runs all pipelines passed as arguments
+  # --background: Run the pipeline in the background
+  # --sequential: Run pipelines one after another
   run_pipelines: |-
+    run_pipelines --background --sequential
+
+  # Runs the default pipeline passed as arguments
   run_default_pipeline: |-
-  run_dependency_pipelines:
+    run_default_pipeline PIPELINE
+
+  # Runs a pipeline of each dependency passed as arguments
+  # --pipeline: The pipeline to deploy from the dependency
+  # --exclude: Dependencies to exclude
+  # --only: Dependencies to include
+  # --sequential: Run dependencies one after another
+  # --all: Deploy all dependencies
+  run_dependency_pipelines: |-
+    run_dependency_pipelines DEPENDENCY-1 DEPENDENCY-2 ... --pipeline DEPENDENCY --exclude [DEPENDENCIES] --only [DEPENDENCIES] --sequential --all
+
+  # Returns the name of a Kubernetes pod
+  # --image-selector: The image selector to use to select the container
+  # --label-selector: The label selector to use to select the container
+  # --container: The container to use
+  # --namespace/-n: The namespace to use
+  # --disable-wait: If true, will not wait for the container to become ready
+  # --timeout: The timeout to wait. Defaults to 5 minutes
+  select_pod:
+    select_pod --image-selector IMAGE --label-selector LABEL --container CONTAINER-NAME --namespace/-n NAMESPACE --disable-wait --timeout 5
+
+  # Executes the command provided as argument inside a container
+  # --image-selector: The image selector to use to select the container
+  # --label-selector: The label selector to use to select the container
+  # --container: The container to use
+  # --namespace/-n: The namespace to use
+  # --disable-wait: If true, will not wait for the container to become ready
+  # --timeout: The timeout to wait. Defaults to 5 minutes
+  exec_container:
+    exec_container --image-selector IMAGE --label-selector LABEL --container CONTAINER-NAME --namespace/-n NAMESPACE --disable-wait --timeout 5
+
+  # Returns the value of the config loaded from devspace.yaml
+  get_config_value:
+    get_config_path [json.path]
 
   # Global functions
 
   # Returns true if the pipeline currently being executed is run because the project is a dependency of another project
   is_dependency:
+
   # Returns true if the value of the argument is empty string
   is_empty: VALUE
+
   # Returns true if the values of both arguments provided are equal
   is_equal: VALUE-1 VALUE-2
+
   # Returns true if the current operating system equals the value provided as argument
+  # Options: darwin, linux, windows, aix, android, dragonfly, freebsd, hurd, illumos, ios, js, nacl, netbsd, openbsd, plan9, solaris
   is_os: VALUE
+
   # Returns true if the value of the argument is "true"
   is_true: VALUE
 
   # Returns the content of a file
   cat: FILE-PATH
+
   # Returns the value of the flag that is provided as argument
   get_flag: FLAG-NAME
+
   # Executes the command provided as argument and watches for conditions to restart the command
   # --fail on error: If true the command will fail on an error while running the sub command
   # --path / -p: The paths to watch. Can be patterns in the form of ./**/my-file.txt
   run_watch (--fail-on-error SUBCOMMAND) (--path / -p PATH):
+    run_watch COMMAND --fail-on-error SUBCOMMAND --path/-p PATH
+
   # Pauses the script execution for the number of seconds provided as argument
   sleep: SECONDS
+
   # Reads from stdin, splits input by blanks and executes the command provided as argument for each blank-separated input value
   xargs: 
 
+# Pipelines are the work blocks that DevSpace should execute when devspace dev, devspace build, devspace deploy, devspace purge or a custom pipeline is called.
 pipelines:
-  dev:
-    run: |-
-      run_dependencies --all
-      create_deployments --all
-      start_dev APP-NAME
 
-  deploy:
-    run: |-
-      run_dependencies --all
-      build_images --all -t $(git describe --always)
-      create_deployments --all
-  
-  CUSTOM:
-    run: |-
-      ...
+  # Name of the pipeline, will be filled automatically.
+  # Options: dev, build, deploy, purge, or custom
+  pipeline-name:
 
+    # Run is the actual shell command that should be executed during this pipeline.
+    run: |- # required
+
+    # Flags are extra flags that can be used for running the pipeline via devspace run-pipeline.
+    flags:
+      name:
+      short:
+      type: # default: bool
+      default:
+      description:
+    
+    # ContinueOnError will not fail the whole job and pipeline if a call within the step fails.
+    continueOnError: # default: false
+
+  ...
+
+# Images holds configuration of how DevSpace should build images. By default, DevSpace will build all defined images.
 images:
-  APP-NAME:
+  # Name of the image, will be filled automatically.
+  IMAGE-NAME: # required
+
+    # Image is the complete image name including registry and repository for example myregistry.com/mynamespace/myimage.
     image: IMAGE-URL
-    dockerfile: PATH-TO-DOCKERFILE
+
+    # Tags is an array that specifies all tags that should be build during the build process. If this is empty, devspace will generate a random tag.
+    tags: 
+
+    # BUILD CONFIGURATION
+
+    # Dockerfile specifies a path (relative or absolute) to the dockerfile.
+    dockerfile: # default: ./Dockerfile
+
+    # Context is the context path to build with.
+    context: # default: ./
+
+    # BuildArgs are the build args that are to the build.
+    buildArgs:
+
+    # Target is the target that should get used during the build. Only works if the dockerfile supports this.
+    target:
+
+    # Network is the network that should get used to build the image.
+    network:
+
+    # RebuildStrategy is used to determine when DevSpace should rebuild an image.
+    # Options: default, always, ignoreContextChanges
+    rebuildStrategy: # default: default
+
+    # IN-MEMORY OVERWRITES
+
+    # Entrypoint specifies an entrypoint that will be appended to the dockerfile during image build in memory. Example: ["sleep", "99999"].
+    entrypoint:
+
+    # Cmd specifies the arguments for the entrypoint that will be appended during build in memory to the dockerfile.
+    cmd:
+
+    # AppendDockerfileInstructions are instructions that will be appended to the Dockerfile that is build at the current build target and are appended before the entrypoint and cmd instructions.
+    appendDockerfileInstructions:
+
+    # PUSH & PULL
+
+    # SkipPush will not push the image to a registry if enabled. Only works if docker or buildkit is chosen as build method.
+    skipPush: # default: false
+
+    # CreatePullSecret specifies if a pull secret should be created for this image in the target namespace.
+    createPullSecret: # default: true
+
+    # BUILD ENGINES
+
+    # BuildKit if buildKit is specified, DevSpace will build the image either in-cluster or locally with BuildKit.
+    buildkit:
+      # InCluster if specified, DevSpace will use BuildKit to build the image within the cluster.
+      inCluster:
+
+        # Name is the name of the builder to use. If omitted, DevSpace will try to create or reuse a builder in the form devspace-$NAMESPACE.
+        name:
+
+        # Namespace where to create the builder deployment in.
+        namespace: # default: current active namespace
+
+        # Rootless if enabled will create a rootless builder deployment.
+        rootless: # default: false
+        
+        # Image is the docker image to use for the BuildKit deployment.
+        image:
+
+        # NodeSelector is the node selector to use for the BuildKit deployment.
+        nodeSelector:
+
+        # NoCreate. By default, DevSpace will try to create a new builder if it cannot be found. If this is true, DevSpace will fail if the specified builder cannot be found.
+        noCreate: # default: false
+
+        # NoRecreate. By default, DevSpace will try to recreate the builder if the builder configuration in the devspace.yaml differs from the actual builder configuration. If this is true, DevSpace will not try to do that.
+        noRecreate: # default: false
+
+        # NoLoad if enabled, DevSpace will not try to load the built image into the local docker daemon if skip push is defined.
+        noLoad: # default: false
+        
+        # CreateArgs are additional args to create the builder with.
+        createArgs:
+
+      # PreferMinikube if false, will not try to use the minikube docker daemon to build the image.
+      preferMiniKube: # default: false
+
+      # Args are additional arguments to call docker buildx build with.
+      args:
+
+      # Command to override the base command to create a builder and build images.
+      command: # default: ["docker", "buildx"]
+
+    # Docker if docker is specified, DevSpace will build the image using the local docker daemon.
+    docker:
+
+      # DisableFallback allows you to turn off kaniko building if docker isn't installed.
+      disableFallback: # default: false
+
+      # PreferMinikube if false, will not try to use the minikube docker daemon to build the image.
+      preferMiniKube: # default: false
+
+      # UseCLI specifies if DevSpace should use the docker cli for building.
+      useCli: # default: false
+
+      # Args are additional arguments to pass to the docker cli.
+      args:
+
+    # Kaniko if kaniko is specified, DevSpace will build the image in-cluster with kaniko.
+    kaniko:
+
+      # Cache tells DevSpace if a cache repository should be used.
+      cache: # default: false
+
+      # SnapshotMode tells DevSpace which snapshot mode kaniko should use.
+      snapshotMode: # default: time
+
+      # Image is the image name of the kaniko pod to use.
+      image:
+
+      # InitImage to override the init image of the kaniko pod.
+      initImage:
+
+      # Args for additional arguments that should be passed to kaniko.
+      args:
+
+      # Command to replace the starting command for the kaniko container.
+      command:
+
+      # Namespace is the namespace where the kaniko pod should be run.
+      namespace:
+
+      # Insecure allows pushing to insecure registries.
+      insecure: # default: false
+
+      # PullSecret is the pull secret to mount by default.
+      pullSecret:
+
+      # SkipPullSecretMount will skip mounting the pull secret.
+      skipPullSecretMount: # default: false
+
+      # NodeSelector is the node selector to use for the kaniko pod.
+      nodeSelector:
+
+      # Tolerations is a tolerations list to use for the kaniko pod.
+      tolerations:
+        key:
+        operator:
+        value:
+        effect:
+        tolerationSeconds:
+
+      #ServiceAccount is the service account to use for the kaniko pod.
+      serviceAccount:
+
+      # Annotations are extra annotations that will be added to the build pod.
+      annotations:
+
+      # Labels are extra labels that will be added to the build pod.
+      labels:
+
+      # InitEnv are extra environment variables that will be added to the build init container.
+      initEnv:
+
+      # Env are extra environment variables that will be added to the build kaniko container will populate the env.value field.
+      env:
+
+      # EnvFrom are extra environment variables from configmap or secret that will be added to the build kaniko container will populate the env.valueFrom field.
+      envFrom:
+
+      # AdditionalMounts are additional mounts that will be added to the build pod.
+      additionalMounts:
+
+        # The secret that should be mounted.
+        secret:
+
+          # Name of the secret in the pod's namespace to use.
+          name:
+          
+          # If unspecified, each key-value pair in the Data field of the referenced Secret will be projected into the volume as a file whose name is the key and content is the value.
+          items:
+            # The key to project.
+            key:
+            # The relative path of the file to map the key to.
+            path: 
+            # Mode bits to use on this file, must be a value between 0 and 0777.
+            mode: # default: current volume defaultMode
+
+          # Mode bits to use on created files by default. Must be a value between 0 and 0777.
+          defaultMode: # default: 0644
+        
+        # The configMap that should be mounted.
+        configMap:
+
+          # Name of the configmap.
+          name:
+
+          # If unspecified, each key-value pair in the Data field of the referenced ConfigMap will be projected into the volume as a file whose name is the key and content is the value.
+          items:
+            # The key to project.
+            key: 
+            # The relative path of the file to map the key to.
+            path: 
+            # Mode bits to use on this file, must be a value between 0 and 0777.
+            mode: # default: current volume defaultMode
+          
+          # Mode bits to use on created files by default. Must be a value between 0 and 0777. 
+          # Directories within the path are not affected by this setting. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.
+          defaultMode: # default: 0644
+
+        # Mounted read-only if true, read-write otherwise (false or unspecified).
+        readOnly: # default: false
+
+        # Path within the container at which the volume should be mounted. Must not contain ':'.
+        mountPath:
+
+        # Path within the volume from which the container's volume should be mounted.
+        subPath: # default: "" (volume root)
+
+      # Resources are the resources that should be set on the kaniko pod.
+      resources:
+
+        # Requests are the requests part of the resources.
+        requests:
+
+        # Limits are the limits part of the resources.
+        limits:
+        
+    # Custom if custom is specified, DevSpace will build the image with the help of a custom script.
+    custom:
+      # Command to execute to build the image. 
+      # You can use ${runtime.images.my-image.image} and ${runtime.image.my-image.tag} to reference the image and tag that should get built.
+      command:
+
+      # OnChange will determine when the command should be rerun.
+      onChange:
 
 deployments:
   APP-NAME:
