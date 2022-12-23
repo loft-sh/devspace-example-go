@@ -1,0 +1,13 @@
+version: v2beta1
+name: hello-world
+
+deployments:
+  hello-world:
+    helm:
+      values:
+        containers:
+          - image: loftsh/go
+            command:
+              - tail
+              - -f
+              - /dev/null
