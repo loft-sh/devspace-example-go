@@ -25,7 +25,18 @@ dev:
 
 The `app.kubernetes.io/component` label was added by the [component-chart](https://www.devspace.sh/component-chart/docs/introduction) we used to deploy the application. `imageSelector` may not work if you were to have multiple containers using the same image. In this case you could add a `container` property to specify the container to connect to. For this example, we'll stick with `imageSelector` since it's simple and works for our situation.
 
-Now when we run `devspace dev` DevSpace won't exit immediately and instead leave us with a terminal to the running container of our deployment.
+We can also remove the `command` we added to our deployment, since now DevSpace will start a terminal session for us. Your `deployments` section should now look like:
+
+```yaml
+deployments:
+  hello-world:
+    helm:
+      values:
+        containers:
+          - image: loftsh/go
+```
+
+Now when we run `devspace dev` DevSpace won't exit immediately and instead leave us with a terminal to the running container of our deployment. 
 
 ```sh
 ❯ devspace dev
@@ -117,7 +128,13 @@ main.go
 ```
 
 ## Making Changes
-Now that we have a terminal and file syncing configured, lets make some changes. Lets run our initial application with `go run main.go`:
+Now that we have a terminal and file syncing configured, lets make some changes. First, lets initialize our go module:
+```sh
+root@hello-world-devspace-68d996b7d5-slhpc:/app# go mod init github.com/loft-sh/devspace-example-go/hello-world
+go: creating new go.mod: module github.com/loft-sh/devspace-example-go/hello-world
+```
+
+Lets run our initial application with `go run main.go`:
 ```sh
 root@hello-world-devspace-68d996b7d5-slhpc:/app# go run main.go
 

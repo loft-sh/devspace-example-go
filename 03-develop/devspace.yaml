@@ -7,10 +7,6 @@ deployments:
       values:
         containers:
           - image: loftsh/go
-            command:
-              - tail
-              - -f
-              - /dev/null
 
 dev:
   hello-world:
