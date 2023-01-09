@@ -1,0 +1,21 @@
+version: v2beta1
+name: hello-world
+
+deployments:
+  hello-world:
+    helm:
+      values:
+        containers:
+          - image: loftsh/go
+
+dev:
+  hello-world:
+    imageSelector: loftsh/go
+    terminal: {}
+    sync:
+      - path: ./:/app
+        excludePaths:
+          - devspace.yaml
+          - README.md
+    ports:
+      - port: "9090:8080"
