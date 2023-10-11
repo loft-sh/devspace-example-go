@@ -1,0 +1,44 @@
+version: v2beta1
+name: hello-world
+
+vars:
+  IMAGE_NAME: $(uuidgen | tr "[:upper:]" "[:lower:]")
+
+images:
+  hello-world:
+    image: ttl.sh/${IMAGE_NAME}:2h
+
+deployments:
+  hello-world:
+    helm:
+      values:
+        containers:
+          - image: image(hello-world):tag(hello-world)
+
+dev:
+  hello-world:
+    imageSelector: image(hello-world):tag(hello-world)
+    devImage: loftsh/go
+    logs: {}
+    command:
+      - /app/server
+    sync:
+      - path: ./build/server:/app/server
+        file: true
+        onUpload:
+          restartContainer: true
+    ports:
+      - port: "9090:8080"
+      - port: "23450:2345"
+
+pipelines:
+  dev: |-
+    run_pipelines compile-app default-dev
+  compile-app: |-
+    # Do an initial build
+    ./hack/build.sh
+    
+    # Rebuild on changes...
+    run_watch --path "./**/*.go" -- ./hack/build.sh
+  default-dev: |-
+    run_default_pipeline dev

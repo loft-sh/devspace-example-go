@@ -1,0 +1,38 @@
+version: v2beta1
+name: hello-world
+
+vars:
+  IMAGE_NAME: $(uuidgen | tr "[:upper:]" "[:lower:]")
+
+images:
+  hello-world:
+    image: ttl.sh/${IMAGE_NAME}:2h
+
+deployments:
+  hello-world:
+    helm:
+      values:
+        containers:
+          - image: image(hello-world):tag(hello-world)
+
+dev:
+  hello-world:
+    imageSelector: image(hello-world):tag(hello-world)
+    devImage: loftsh/go
+    logs: {}
+    command:
+      - go
+      - run
+      - main.go
+    sync:
+      - path: ./:/app
+        excludePaths:
+          - '**'
+          - '!**/*.go'
+          - '!go.mod'
+          - '!go.sum'
+        onUpload:
+          restartContainer: true
+    ports:
+      - port: "9090:8080"
+      - port: "23450:2345"
