@@ -91,4 +91,16 @@ dev:
 ```
 
 ## Run `devspace dev`!
-With the two pipelines running in parallel, we have one that performs the file synchronization, port-forwarding, and container restarting according to the `dev` configuration, and another that watches for file changes and recompiles our binary! With the combination, we have a hot reloading development experience that uses a compiled binary.  
+With the two pipelines running in parallel, we have one that performs the file synchronization, port-forwarding, and container restarting according to the `dev` configuration, and another that watches for file changes and recompiles our binary! With the combination, we have a hot reloading development experience that uses a compiled binary.
+
+On some systems, you may not see the application restart as changes are made. Run `devspace dev --debug` to gather more information. If you encounter a `text file busy` error when syncing the binary directly, a simple workaround can be used. Instead of running the synced binary directly, create a copy and run the copy instead:
+```yaml
+dev:
+  hello-world:
+    command:
+      - sh
+      - -c
+      - cp /app/server /app/server-run && /app/server-run
+```
+
+To avoid surprises in mixed environments, this is the command that used in the final `devspace.yaml`.

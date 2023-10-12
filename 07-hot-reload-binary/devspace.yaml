@@ -20,8 +20,12 @@ dev:
     imageSelector: image(hello-world):tag(hello-world)
     devImage: loftsh/go
     logs: {}
+    # The following is a workaround for systems that encounter `text file busy` error
+    # when trying to sync a running binary.
     command:
-      - /app/server
+      - sh
+      - -c
+      - cp /app/server /app/server-run && /app/server-run
     sync:
       - path: ./build/server:/app/server
         file: true
